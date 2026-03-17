@@ -49,14 +49,16 @@
     <!-- Landing Page View -->
     <div id="landing-view" class="landing-container">
         <div class="landing-content">
-            <div class="landing-logo">
-                <i class="fa-solid fa-cloud-sun fa-4x" style="color: var(--clr-primary);"></i>
+            <div class="landing-header">
+                <i class="fa-solid fa-cloud-sun fa-3x logo-icon"></i>
+                <h1>Sign in to SkyCast</h1>
+                <p>Welcome to your beautiful, accurate, and real-time weather dashboard.</p>
             </div>
-            <h1>Welcome to SkyCast</h1>
-            <p>Your beautiful, accurate, and real-time weather dashboard. Please log in to view weather forecasts.</p>
-            <button id="google-login-btn" class="btn primary btn-large">
-                <i class="fa-brands fa-google"></i> Continue with Google
-            </button>
+            <div class="landing-actions">
+                <button id="google-login-btn" class="btn btn-large google-btn">
+                    <i class="fa-brands fa-google"></i> Continue with Google
+                </button>
+            </div>
         </div>
     </div>
 
@@ -97,6 +99,10 @@
                         <div class="temp-display">
                             <h1 id="current-temp">--°</h1>
                             <p id="weather-desc">--</p>
+                            <div class="hi-lo-temp">
+                                <span id="hi-temp">H: --°</span>
+                                <span id="lo-temp">L: --°</span>
+                            </div>
                         </div>
                     </div>
                     <div class="bottom-row metrics">
@@ -120,6 +126,13 @@
                                 <span>Pressure</span>
                                 <strong id="pressure">-- hPa</strong>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hourly Forecast within current weather card -->
+                    <div class="hourly-forecast-wrapper">
+                        <div class="hourly-container" id="hourly-container">
+                            <!-- Hourly items dynamically populated -->
                         </div>
                     </div>
                 </div>

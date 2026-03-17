@@ -17,6 +17,7 @@ const API_KEY = 'f0f9e46ef5fe4bd1af6170319261403';
 let isCelsius = true;
 let currentWeatherData = null;
 let currentDailyData = null;
+let currentLocalTime = null;
 
 // WeatherAPI Condition to FontAwesome Mapping
 function getWeatherIcon(code, isDay) {
@@ -122,6 +123,7 @@ function updateUI(data) {
     
     currentWeatherData = data.current;
     currentDailyData = data.forecast;
+    currentLocalTime = data.localtime;
     
     renderTemperatures();
 
@@ -171,9 +173,11 @@ function updateUI(data) {
         document.body.setAttribute('data-theme', 'night');
     }
 
-    // Show section and scroll nicely
+    // Show section and scroll nicely only if dashboard is visible
     weatherSection.classList.remove('hidden');
-    weatherSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!dashboardView.classList.contains('hidden')) {
+        weatherSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function renderTemperatures() {
@@ -182,6 +186,59 @@ function renderTemperatures() {
     let temp = isCelsius ? currentWeatherData.temp_c : currentWeatherData.temp_f;
     document.getElementById('current-temp').textContent = `${Math.round(temp)}°${isCelsius ? 'C' : 'F'}`;
     
+    if (currentDailyData && currentDailyData.length > 0) {
+        const today = currentDailyData[0].day;
+        const tMax = isCelsius ? Math.round(today.maxtemp_c) : Math.round(today.maxtemp_f);
+        const tMin = isCelsius ? Math.round(today.mintemp_c) : Math.round(today.mintemp_f);
+        document.getElementById('hi-temp').textContent = `H: ${tMax}°`;
+        document.getElementById('lo-temp').textContent = `L: ${tMin}°`;
+
+        // Hourly Forecast
+        const hourlyContainer = document.getElementById('hourly-container');
+        if (hourlyContainer) {
+            hourlyContainer.innerHTML = '';
+            
+            let currentHour = 0;
+            if (currentLocalTime) {
+                const timeParts = currentLocalTime.split(' ');
+                if (timeParts.length > 1) {
+                    currentHour = parseInt(timeParts[1].split(':')[0], 10);
+                }
+            }
+            
+            // Combine next 24 hours from today and tomorrow
+            const combinedHours = [];
+            currentDailyData.forEach(day => {
+                if (day && day.hour) {
+                    combinedHours.push(...day.hour);
+                }
+            });
+            
+            const next24 = combinedHours.slice(currentHour, currentHour + 24);
+            
+            next24.forEach((hourObj, index) => {
+                const timeStr = hourObj.time.split(' ')[1]; // "HH:MM"
+                const hourTemp = isCelsius ? Math.round(hourObj.temp_c) : Math.round(hourObj.temp_f);
+                
+                // For the very first item (current hour), we can label it "Now"
+                const displayTime = index === 0 ? 'Now' : timeStr;
+                
+                // Get FontAwesome icon class
+                const isDay = hourObj.is_day; // weatherapi provides `is_day` in hourly data
+                const hourIcon = getWeatherIcon(hourObj.condition.code, isDay);
+                
+                const item = document.createElement('div');
+                item.className = 'hourly-item';
+                item.innerHTML = `
+                    <div class="hourly-time">${displayTime}</div>
+                    <div class="hourly-icon"><i class="fa-solid ${hourIcon}"></i></div>
+                    <div class="hourly-temp">${hourTemp}°</div>
+                `;
+                hourlyContainer.appendChild(item);
+            });
+        }
+    }
+
     // Re-render weekly if it exists
     if(currentDailyData) {
         const forecastContainer = document.getElementById('forecast-container');
@@ -219,8 +276,25 @@ const logoutBtn = document.getElementById('logout-btn');
 const landingView = document.getElementById('landing-view');
 const dashboardView = document.getElementById('dashboard-view');
 
-googleLoginBtn.addEventListener('click', async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
+googleLoginBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const ogHtml = googleLoginBtn.innerHTML;
+    googleLoginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+    googleLoginBtn.disabled = true;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({ 
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin
+        }
+    });
+
+    if (error) {
+        console.error("Login Error:", error.message);
+        googleLoginBtn.innerHTML = ogHtml;
+        googleLoginBtn.disabled = false;
+        alert("Failed to login: " + error.message);
+    }
 });
 
 logoutBtn.addEventListener('click', async () => {
@@ -353,20 +427,15 @@ hamburger.addEventListener('click', () => {
 // Initialize with user's approximate location
 window.addEventListener('DOMContentLoaded', async () => {
     try {
-        const data = await getWeatherData('auto:ip');
-        updateUI(data);
+        const { data: { session } } = await supabase.auth.getSession();
+        const weatherData = await getWeatherData('auto:ip');
+        updateUI(weatherData);
+
+        // If not logged in, but we fetched the weather data successfully,
+        // it won't scroll due to our updateUI check.
     } catch (error) {
-        console.log("Could not fetch location based weather automatically.");
+        console.log("Could not fetch location based weather automatically.", error);
     }
 });
 
-// Custom Subtle Mouse Glow Effect
-const glowEl = document.createElement('div');
-glowEl.className = 'mouse-glow';
-document.body.appendChild(glowEl);
-
-window.addEventListener('mousemove', (e) => {
-    // Only update if it's visible or track regardless
-    glowEl.style.setProperty('--mouse-x', `${e.clientX}px`);
-    glowEl.style.setProperty('--mouse-y', `${e.clientY}px`);
-});
+// Custom Subtle Mouse Glow Effect removed for cleaner Apple aesthetic
