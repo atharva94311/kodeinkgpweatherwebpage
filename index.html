@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body data-theme="day">
@@ -27,6 +29,7 @@
             </ul>
             <div class="nav-controls">
                 <button id="unit-toggle" class="btn outline" title="Toggle C/F">°C</button>
+                <button id="logout-btn" class="btn outline hidden" title="Logout">Logout</button>
                 <button class="hamburger" id="hamburger">
                     <i class="fa-solid fa-bars"></i>
                 </button>
@@ -43,7 +46,23 @@
         </ul>
     </div>
 
-    <main>
+    <!-- Landing Page View -->
+    <div id="landing-view" class="landing-container">
+        <div class="landing-content">
+            <div class="landing-logo">
+                <i class="fa-solid fa-cloud-sun fa-4x" style="color: var(--clr-primary);"></i>
+            </div>
+            <h1>Welcome to SkyCast</h1>
+            <p>Your beautiful, accurate, and real-time weather dashboard. Please log in to view weather forecasts.</p>
+            <button id="google-login-btn" class="btn primary btn-large">
+                <i class="fa-brands fa-google"></i> Continue with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard View (Protected) -->
+    <div id="dashboard-view" class="hidden">
+        <main>
         <!-- Search & Hero Section -->
         <section id="home" class="hero-section">
             <div class="hero-content">
@@ -132,7 +151,8 @@
                 </div>
             </div>
         </section>
-    </main>
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer>

@@ -1,3 +1,8 @@
+// Supabase Init
+const supabaseUrl = 'https://qwfgvcrylolaxwfzhsra.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3Zmd2Y3J5bG9sYXh3Znpoc3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTQyNjksImV4cCI6MjA4OTMzMDI2OX0.-4ER4xXkUmO2S6cdvS25nSC28Chwtrf7VtswmmeqIIA';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 // DOM Elements
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
@@ -205,6 +210,58 @@ function renderTemperatures() {
             `;
             forecastContainer.appendChild(item);
         }
+    }
+}
+
+// Supabase Authentication & Logging
+const googleLoginBtn = document.getElementById('google-login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const landingView = document.getElementById('landing-view');
+const dashboardView = document.getElementById('dashboard-view');
+
+googleLoginBtn.addEventListener('click', async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google' });
+});
+
+logoutBtn.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+});
+
+// Listen for auth state changes
+supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+        // Log in event
+        landingView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        
+        if (event === 'SIGNED_IN') {
+             logUserLogin(session.user);
+        }
+    } else {
+        // Logged out
+        landingView.classList.remove('hidden');
+        dashboardView.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+    }
+});
+
+async function logUserLogin(user) {
+    try {
+        // Get IP Addr
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        
+        // Log to Supabase
+        await supabase.from('user_logs').insert([
+            {
+                user_id: user.id,
+                email: user.email,
+                ip_address: ipData.ip
+            }
+        ]);
+    } catch (e) {
+        console.error("Failed to log user login", e);
     }
 }
 
