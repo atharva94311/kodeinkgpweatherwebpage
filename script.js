@@ -13,13 +13,18 @@ const weatherSection = document.getElementById('weather-details');
 const navbar = document.getElementById('navbar');
 const backToTopBtn = document.getElementById('back-to-top');
 
-const API_KEY = 'f0f9e46ef5fe4bd1af6170319261403';
+// Weather API key is now stored server-side in Supabase Edge Function
+const WEATHER_PROXY_URL = `${supabaseUrl}/functions/v1/weather`;
 
 // Unit Toggle State
 let isCelsius = true;
 let currentWeatherData = null;
 let currentDailyData = null;
 let currentLocalTime = null;
+
+// Rate limiting state
+let lastSearchTime = 0;
+const SEARCH_COOLDOWN_MS = 2000;
 
 // WeatherAPI Condition to FontAwesome Mapping
 function getWeatherIcon(code, isDay) {
@@ -90,14 +95,14 @@ function getShortDay(dateString) {
     return new Date(dateString).toLocaleDateString(undefined, options);
 }
 
-// Fetch Weather Data
+// Fetch Weather Data (via server-side proxy)
 async function getWeatherData(city) {
     try {
-        const response = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${encodeURIComponent(city)}&days=7&aqi=no&alerts=no`);
+        const response = await fetch(`${WEATHER_PROXY_URL}?city=${encodeURIComponent(city)}`);
         const data = await response.json();
 
         if (data.error) {
-            throw new Error(data.error.message);
+            throw new Error(data.error.message || 'Weather data unavailable');
         }
 
         return {
@@ -108,7 +113,6 @@ async function getWeatherData(city) {
         };
 
     } catch (error) {
-        console.error("Error fetching data:", error);
         throw error;
     }
 }
@@ -292,10 +296,9 @@ googleLoginBtn.addEventListener('click', async (e) => {
     });
 
     if (error) {
-        console.error("Login Error:", error.message);
         googleLoginBtn.innerHTML = ogHtml;
         googleLoginBtn.disabled = false;
-        alert("Failed to login: " + error.message);
+        alert('Login failed. Please try again later.');
     }
 });
 
@@ -324,26 +327,26 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
 async function logUserLogin(user) {
     try {
-        // Get IP Addr
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        
-        // Log to Supabase
+        // Log to Supabase (only user_id — no PII like email or IP)
         await supabase.from('user_logs').insert([
             {
-                user_id: user.id,
-                email: user.email,
-                ip_address: ipData.ip
+                user_id: user.id
             }
         ]);
-    } catch (e) {
-        console.error("Failed to log user login", e);
+    } catch (_e) {
+        // Silently fail — login logging is non-critical
     }
 }
 
 // Event Listeners
 searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Client-side rate limiting
+    const now = Date.now();
+    if (now - lastSearchTime < SEARCH_COOLDOWN_MS) return;
+    lastSearchTime = now;
+    
     const city = searchInput.value.trim();
     if (!city) return;
 
@@ -429,14 +432,11 @@ hamburger.addEventListener('click', () => {
 // Initialize with user's approximate location
 window.addEventListener('DOMContentLoaded', async () => {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
         const weatherData = await getWeatherData('auto:ip');
         updateUI(weatherData);
-
-        // If not logged in, but we fetched the weather data successfully,
-        // it won't scroll due to our updateUI check.
-    } catch (error) {
-        console.log("Could not fetch location based weather automatically.", error);
+    } catch (_error) {
+        // Silently handle — auto-location weather is a convenience feature
     }
 });
 
