@@ -441,10 +441,60 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Mouse Glow Effect
-const glowEl = document.createElement('div');
-glowEl.classList.add('mouse-glow');
-document.body.appendChild(glowEl);
+// Mouse Glow & Particle Effect (Desktop only)
+if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    const glowEl = document.createElement('div');
+    glowEl.classList.add('mouse-glow');
+    document.body.appendChild(glowEl);
 
-document.addEventListener('mousemove', (e) => {
-    glowEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-});
+    let isGlowActive = false;
+    let lastParticleTime = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isGlowActive) {
+            glowEl.classList.add('active');
+            isGlowActive = true;
+        }
+        
+        glowEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+        
+        const now = Date.now();
+        if (now - lastParticleTime > 40) { 
+            lastParticleTime = now;
+            createParticle(e.clientX, e.clientY);
+        }
+    });
+
+    document.addEventListener('mouseleave', () => {
+        glowEl.classList.remove('active');
+        isGlowActive = false;
+    });
+
+    function createParticle(x, y) {
+        const particle = document.createElement('div');
+        particle.classList.add('mouse-particle');
+        
+        const offsetX = (Math.random() - 0.5) * 40;
+        const offsetY = (Math.random() - 0.5) * 40;
+        
+        const tx = (Math.random() - 0.5) * 60 + "px";
+        const ty = (Math.random() - 0.5) * -80 - 20 + "px";
+        
+        particle.style.left = (x + offsetX) + "px";
+        particle.style.top = (y + offsetY) + "px";
+        particle.style.setProperty('--tx', tx);
+        particle.style.setProperty('--ty', ty);
+        
+        document.body.appendChild(particle);
+        
+        setTimeout(() => {
+            if (particle.parentNode) particle.remove();
+        }, 1500);
+    }
+}
+
+
+
+
+
+
