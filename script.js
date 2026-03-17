@@ -1,7 +1,9 @@
-// Supabase Init
+// Supabase Init (ESM import to avoid eval() CSP issues)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
 const supabaseUrl = 'https://qwfgvcrylolaxwfzhsra.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3Zmd2Y3J5bG9sYXh3Znpoc3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTQyNjksImV4cCI6MjA4OTMzMDI2OX0.-4ER4xXkUmO2S6cdvS25nSC28Chwtrf7VtswmmeqIIA';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // DOM Elements
 const searchForm = document.getElementById('search-form');
