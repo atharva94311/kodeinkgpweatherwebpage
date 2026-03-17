@@ -288,6 +288,7 @@ ul { list-style: none; }
 
 .weather-container {
     max-width: 1000px;
+    width: 100%;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr;
@@ -311,6 +312,7 @@ ul { list-style: none; }
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.3s ease;
+    min-width: 0;
 }
 .highlight-card:hover {
     transform: translateY(-5px);
@@ -601,10 +603,23 @@ footer {
     .nav-links { display: none; }
     .hamburger { display: block; }
     .hero-content h1 { font-size: 2.5rem; }
+    .highlight-card {
+        padding: 20px;
+        text-align: center;
+    }
+    .top-row {
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 10px;
+    }
     .bottom-row.metrics {
         flex-direction: column;
         gap: 15px;
-        align-items: flex-start;
+        align-items: center;
+    }
+    .metric {
+        flex-direction: column;
+        gap: 5px;
     }
 }
 
@@ -755,4 +770,24 @@ body[data-theme="night"] .google-btn {
 .hourly-temp {
     font-weight: 600;
     font-size: 1.1rem;
+}
+
+/* Mouse Glow Effect */
+.mouse-glow {
+    position: fixed;
+    top: -150px;
+    left: -150px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(200, 220, 255, 0.25) 0%, transparent 60%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    mix-blend-mode: screen;
+    will-change: transform;
+}
+
+body[data-theme="day"] .mouse-glow {
+    background: radial-gradient(circle, rgba(49, 130, 206, 0.15) 0%, transparent 60%);
+    mix-blend-mode: normal;
 }

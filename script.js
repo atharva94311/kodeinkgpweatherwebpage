@@ -440,4 +440,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Custom Subtle Mouse Glow Effect removed for cleaner Apple aesthetic
+// Mouse Glow Effect
+const glowEl = document.createElement('div');
+glowEl.classList.add('mouse-glow');
+document.body.appendChild(glowEl);
+
+document.addEventListener('mousemove', (e) => {
+    glowEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+});
