@@ -287,7 +287,7 @@ googleLoginBtn.addEventListener('click', async (e) => {
     const { data, error } = await supabase.auth.signInWithOAuth({ 
         provider: 'google',
         options: {
-            redirectTo: window.location.origin
+            redirectTo: window.location.origin + window.location.pathname
         }
     });
 
