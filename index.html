@@ -76,7 +76,7 @@
         /* ============ BODY & BACKGROUND ============ */
         body {
             font-family: var(--font-body);
-            background: var(--gray-100);
+            background: #fdfdfd; /* Pure stark white instead of gray */
             color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
@@ -86,7 +86,7 @@
 
         /* Noise Overlay */
         body::after {
-            content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.03;
+            content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.04;
             background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
         }
 
@@ -251,13 +251,14 @@
         /* ============ PARALLAX IMAGE CARDS ============ */
         .parallax-cards{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
         .parallax-card{position:absolute;border-radius:var(--radius-lg);overflow:hidden;
-            background:var(--glass-bg);border:1px solid var(--glass-border);
-            box-shadow:8px 8px 24px var(--neu-dark),-8px -8px 24px var(--neu-light);
-            transition:transform 0.6s cubic-bezier(0.4,0,0.2,1)}
-        .parallax-card img{width:100%;height:100%;object-fit:cover;filter:grayscale(0.7) contrast(1.1);opacity:0.35}
-        .pcard-1{width:180px;height:240px;top:12%;right:8%}
-        .pcard-2{width:150px;height:200px;bottom:18%;left:6%}
-        .pcard-3{width:120px;height:160px;top:55%;right:15%}
+            background:var(--glass-bg);border:1px solid rgba(255,255,255,0.9);
+            box-shadow:8px 8px 30px rgba(0,0,0,0.06),-8px -8px 30px rgba(255,255,255,0.8);
+            transition:transform 0.6s cubic-bezier(0.4,0,0.2,1); opacity: 0.85;}
+        body[data-theme="night"] .parallax-card { opacity: 0.4; border-color: rgba(255,255,255,0.05); }
+        .parallax-card img{width:100%;height:100%;object-fit:cover;filter:grayscale(0.8) contrast(1.2); opacity: 0.8;}
+        .pcard-1{width:200px;height:260px;top:10%;right:6%}
+        .pcard-2{width:180px;height:240px;bottom:15%;left:8%}
+        .pcard-3{width:140px;height:180px;top:50%;right:12%}
 
         /* ============ ABOUT SECTION ============ */
         .about-section{padding:100px 20px;position:relative;z-index:1;
@@ -306,10 +307,14 @@
 
         /* ============ LANDING PAGE ============ */
         .landing-container{display:flex;justify-content:center;align-items:center;min-height:calc(100vh - 80px);padding:2rem;position:relative;z-index:1}
-        .landing-content{background:var(--glass-bg);padding:3rem 2.5rem;border-radius:var(--radius-lg);text-align:center;
+        .landing-content{background:var(--white);padding:3.5rem 2.5rem;border-radius:var(--radius-lg);text-align:center;
             max-width:440px;width:100%;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-            border:1px solid var(--glass-border);
-            box-shadow:12px 12px 32px var(--neu-dark),-12px -12px 32px var(--neu-light),inset 0 1px 0 rgba(255,255,255,0.5)}
+            border:1px solid rgba(255,255,255,0.8);
+            box-shadow:12px 12px 40px rgba(0,0,0,0.05),-12px -12px 40px rgba(255,255,255,0.8),inset 0 1px 0 rgba(255,255,255,1)}
+        body[data-theme="night"] .landing-content {
+            background:var(--glass-bg); border-color:var(--glass-border);
+            box-shadow:12px 12px 32px var(--neu-dark),-12px -12px 32px var(--neu-light),inset 0 1px 0 rgba(255,255,255,0.1);
+        }
         .landing-header{margin-bottom:2rem}
         .logo-icon{color:var(--accent);margin-bottom:1.5rem}
         .landing-header h1{font-family:var(--font-head);font-size:2rem;font-weight:700;margin-bottom:0.75rem;letter-spacing:-0.02em;
@@ -364,7 +369,7 @@
             <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80" alt="Abstract chrome">
         </div>
         <div class="parallax-card pcard-2" data-speed="0.05">
-            <img src="https://images.unsplash.com/photo-1633177317976-3f9bc45e1d1d?w=400&q=80" alt="Fluid 3D shape">
+            <img src="https://images.unsplash.com/photo-1628126235206-5260b9ea6441?w=400&q=80" alt="Abstract fluid chrome structure">
         </div>
         <div class="parallax-card pcard-3" data-speed="0.04">
             <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=400&q=80" alt="Gradient abstract">
