@@ -1,3 +1,10 @@
+// Supabase Init (ESM import to avoid eval() CSP issues)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabaseUrl = 'https://qwfgvcrylolaxwfzhsra.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3Zmd2Y3J5bG9sYXh3Znpoc3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTQyNjksImV4cCI6MjA4OTMzMDI2OX0.-4ER4xXkUmO2S6cdvS25nSC28Chwtrf7VtswmmeqIIA';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 // DOM Elements
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
@@ -6,12 +13,18 @@ const weatherSection = document.getElementById('weather-details');
 const navbar = document.getElementById('navbar');
 const backToTopBtn = document.getElementById('back-to-top');
 
-const API_KEY = 'f0f9e46ef5fe4bd1af6170319261403';
+// Weather API key is now stored server-side in Supabase Edge Function
+const WEATHER_PROXY_URL = `${supabaseUrl}/functions/v1/weather`;
 
 // Unit Toggle State
 let isCelsius = true;
 let currentWeatherData = null;
 let currentDailyData = null;
+let currentLocalTime = null;
+
+// Rate limiting state
+let lastSearchTime = 0;
+const SEARCH_COOLDOWN_MS = 2000;
 
 // WeatherAPI Condition to FontAwesome Mapping
 function getWeatherIcon(code, isDay) {
@@ -82,14 +95,14 @@ function getShortDay(dateString) {
     return new Date(dateString).toLocaleDateString(undefined, options);
 }
 
-// Fetch Weather Data
+// Fetch Weather Data (via server-side proxy)
 async function getWeatherData(city) {
     try {
-        const response = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${encodeURIComponent(city)}&days=7&aqi=no&alerts=no`);
+        const response = await fetch(`${WEATHER_PROXY_URL}?city=${encodeURIComponent(city)}`);
         const data = await response.json();
 
         if (data.error) {
-            throw new Error(data.error.message);
+            throw new Error(data.error.message || 'Weather data unavailable');
         }
 
         return {
@@ -100,7 +113,6 @@ async function getWeatherData(city) {
         };
 
     } catch (error) {
-        console.error("Error fetching data:", error);
         throw error;
     }
 }
@@ -117,6 +129,7 @@ function updateUI(data) {
     
     currentWeatherData = data.current;
     currentDailyData = data.forecast;
+    currentLocalTime = data.localtime;
     
     renderTemperatures();
 
@@ -166,9 +179,11 @@ function updateUI(data) {
         document.body.setAttribute('data-theme', 'night');
     }
 
-    // Show section and scroll nicely
+    // Show section and scroll nicely only if dashboard is visible
     weatherSection.classList.remove('hidden');
-    weatherSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!dashboardView.classList.contains('hidden')) {
+        weatherSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function renderTemperatures() {
@@ -177,6 +192,59 @@ function renderTemperatures() {
     let temp = isCelsius ? currentWeatherData.temp_c : currentWeatherData.temp_f;
     document.getElementById('current-temp').textContent = `${Math.round(temp)}°${isCelsius ? 'C' : 'F'}`;
     
+    if (currentDailyData && currentDailyData.length > 0) {
+        const today = currentDailyData[0].day;
+        const tMax = isCelsius ? Math.round(today.maxtemp_c) : Math.round(today.maxtemp_f);
+        const tMin = isCelsius ? Math.round(today.mintemp_c) : Math.round(today.mintemp_f);
+        document.getElementById('hi-temp').textContent = `H: ${tMax}°`;
+        document.getElementById('lo-temp').textContent = `L: ${tMin}°`;
+
+        // Hourly Forecast
+        const hourlyContainer = document.getElementById('hourly-container');
+        if (hourlyContainer) {
+            hourlyContainer.innerHTML = '';
+            
+            let currentHour = 0;
+            if (currentLocalTime) {
+                const timeParts = currentLocalTime.split(' ');
+                if (timeParts.length > 1) {
+                    currentHour = parseInt(timeParts[1].split(':')[0], 10);
+                }
+            }
+            
+            // Combine next 24 hours from today and tomorrow
+            const combinedHours = [];
+            currentDailyData.forEach(day => {
+                if (day && day.hour) {
+                    combinedHours.push(...day.hour);
+                }
+            });
+            
+            const next24 = combinedHours.slice(currentHour, currentHour + 24);
+            
+            next24.forEach((hourObj, index) => {
+                const timeStr = hourObj.time.split(' ')[1]; // "HH:MM"
+                const hourTemp = isCelsius ? Math.round(hourObj.temp_c) : Math.round(hourObj.temp_f);
+                
+                // For the very first item (current hour), we can label it "Now"
+                const displayTime = index === 0 ? 'Now' : timeStr;
+                
+                // Get FontAwesome icon class
+                const isDay = hourObj.is_day; // weatherapi provides `is_day` in hourly data
+                const hourIcon = getWeatherIcon(hourObj.condition.code, isDay);
+                
+                const item = document.createElement('div');
+                item.className = 'hourly-item';
+                item.innerHTML = `
+                    <div class="hourly-time">${displayTime}</div>
+                    <div class="hourly-icon"><i class="fa-solid ${hourIcon}"></i></div>
+                    <div class="hourly-temp">${hourTemp}°</div>
+                `;
+                hourlyContainer.appendChild(item);
+            });
+        }
+    }
+
     // Re-render weekly if it exists
     if(currentDailyData) {
         const forecastContainer = document.getElementById('forecast-container');
@@ -208,9 +276,77 @@ function renderTemperatures() {
     }
 }
 
+// Supabase Authentication & Logging
+const googleLoginBtn = document.getElementById('google-login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const landingView = document.getElementById('landing-view');
+const dashboardView = document.getElementById('dashboard-view');
+
+googleLoginBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const ogHtml = googleLoginBtn.innerHTML;
+    googleLoginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+    googleLoginBtn.disabled = true;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({ 
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin + window.location.pathname
+        }
+    });
+
+    if (error) {
+        googleLoginBtn.innerHTML = ogHtml;
+        googleLoginBtn.disabled = false;
+        alert('Login failed. Please try again later.');
+    }
+});
+
+logoutBtn.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+});
+
+// Listen for auth state changes
+supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+        // Log in event
+        landingView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        
+        if (event === 'SIGNED_IN') {
+             logUserLogin(session.user);
+        }
+    } else {
+        // Logged out
+        landingView.classList.remove('hidden');
+        dashboardView.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+    }
+});
+
+async function logUserLogin(user) {
+    try {
+        // Log to Supabase (only user_id — no PII like email or IP)
+        await supabase.from('user_logs').insert([
+            {
+                user_id: user.id
+            }
+        ]);
+    } catch (_e) {
+        // Silently fail — login logging is non-critical
+    }
+}
+
 // Event Listeners
 searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Client-side rate limiting
+    const now = Date.now();
+    if (now - lastSearchTime < SEARCH_COOLDOWN_MS) return;
+    lastSearchTime = now;
+    
     const city = searchInput.value.trim();
     if (!city) return;
 
@@ -296,20 +432,69 @@ hamburger.addEventListener('click', () => {
 // Initialize with user's approximate location
 window.addEventListener('DOMContentLoaded', async () => {
     try {
-        const data = await getWeatherData('auto:ip');
-        updateUI(data);
-    } catch (error) {
-        console.log("Could not fetch location based weather automatically.");
+        const { data: { user } } = await supabase.auth.getUser();
+        const weatherData = await getWeatherData('auto:ip');
+        updateUI(weatherData);
+    } catch (_error) {
+        // Silently handle — auto-location weather is a convenience feature
     }
 });
 
-// Custom Subtle Mouse Glow Effect
-const glowEl = document.createElement('div');
-glowEl.className = 'mouse-glow';
-document.body.appendChild(glowEl);
+// Mouse Glow Effect
+// Mouse Glow & Particle Effect (Desktop only)
+if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    const glowEl = document.createElement('div');
+    glowEl.classList.add('mouse-glow');
+    document.body.appendChild(glowEl);
 
-window.addEventListener('mousemove', (e) => {
-    // Only update if it's visible or track regardless
-    glowEl.style.setProperty('--mouse-x', `${e.clientX}px`);
-    glowEl.style.setProperty('--mouse-y', `${e.clientY}px`);
-});
+    let isGlowActive = false;
+    let lastParticleTime = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isGlowActive) {
+            glowEl.classList.add('active');
+            isGlowActive = true;
+        }
+        
+        glowEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+        
+        const now = Date.now();
+        if (now - lastParticleTime > 40) { 
+            lastParticleTime = now;
+            createParticle(e.clientX, e.clientY);
+        }
+    });
+
+    document.addEventListener('mouseleave', () => {
+        glowEl.classList.remove('active');
+        isGlowActive = false;
+    });
+
+    function createParticle(x, y) {
+        const particle = document.createElement('div');
+        particle.classList.add('mouse-particle');
+        
+        const offsetX = (Math.random() - 0.5) * 40;
+        const offsetY = (Math.random() - 0.5) * 40;
+        
+        const tx = (Math.random() - 0.5) * 60 + "px";
+        const ty = (Math.random() - 0.5) * -80 - 20 + "px";
+        
+        particle.style.left = (x + offsetX) + "px";
+        particle.style.top = (y + offsetY) + "px";
+        particle.style.setProperty('--tx', tx);
+        particle.style.setProperty('--ty', ty);
+        
+        document.body.appendChild(particle);
+        
+        setTimeout(() => {
+            if (particle.parentNode) particle.remove();
+        }, 1500);
+    }
+}
+
+
+
+
+
+
